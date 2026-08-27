@@ -27,6 +27,13 @@
   .wrap { max-width: 520px; margin: 0 auto; }
   h1 { font-size: 26px; margin: 4px 0 2px; color: #ffffff; text-align: center; text-shadow: 0 2px 20px rgba(52,211,153,0.4); letter-spacing: 0.3px; }
   .sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; text-align: center; }
+  .notice-card {
+    font-size: 13px; line-height: 1.6; color: var(--muted); text-align: left;
+    margin-bottom: 18px;
+  }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: -12px; margin-bottom: 18px; }
+  .field-hint.err { color: #fca5a5; }
+  .field-hint.ok { color: #6ee7b7; }
   .card {
     background: var(--glass);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
@@ -115,9 +122,15 @@
 <body>
 <div class="wrap">
   <h1>🚌 Trip Bus Sign-Up</h1>
-  <div class="sub">Pick your bus. Each bus holds 40 (20 F / 20 M). Please refer to your friends’ seat selections as well and make sure you have selected the correct bus.
 
-Please note that throughout the entire trip, you must travel on the same bus you selected during registration. So, kindly double-check your bus selection before submitting.</div>
+  <div class="card notice-card">
+    Each bus holds 40 seats (20 F / 20 M). Please refer to your friends' seat
+    selections as well and make sure you have selected the correct bus.
+    <br><br>
+    Please note that throughout the entire trip, you must travel on the same
+    bus you selected during registration. So, kindly double-check your bus
+    selection before submitting.
+  </div>
 
   <div id="setupWarning" class="setup-warning" style="display:none;">
     ⚠️ Firebase isn't configured yet. Open this file and paste your Firebase config into the
@@ -128,6 +141,10 @@ Please note that throughout the entire trip, you must travel on the same bus you
   <div class="card" id="formCard">
     <label>Your name</label>
     <input type="text" id="nameInput" placeholder="Full name">
+
+    <label>NIC Number</label>
+    <input type="text" id="nicInput" placeholder="12 digit NIC number" inputmode="numeric" maxlength="12">
+    <div class="field-hint" id="nicHint">Must be exactly 12 digits</div>
 
     <label>Gender</label>
     <div class="row">
@@ -149,7 +166,7 @@ Please note that throughout the entire trip, you must travel on the same bus you
   </div>
 
   <div class="brand-footer">
-    <div class="brand-text">Colombo Pre Medicine Students Association</div>
+    <div class="brand-text">Memosa</div>
   </div>
 </div>
 
@@ -232,14 +249,38 @@ function renderBusOptions(){
   updateSubmitState();
 }
 
+function isValidNic(nic){
+  return /^[0-9]{12}$/.test(nic);
+}
+
 function updateSubmitState(){
   const btn = document.getElementById('submitBtn');
   if(!db) return;
   const nameOk = document.getElementById('nameInput').value.trim().length > 0;
-  btn.disabled = !(nameOk && gender && bus && !busFull(bus, gender));
+  const nic = document.getElementById('nicInput').value.trim();
+  const nicOk = isValidNic(nic);
+
+  const hint = document.getElementById('nicHint');
+  if(nic.length === 0){
+    hint.textContent = 'Must be exactly 12 digits';
+    hint.className = 'field-hint';
+  } else if(nicOk){
+    hint.textContent = '✓ Looks good';
+    hint.className = 'field-hint ok';
+  } else {
+    hint.textContent = `Must be exactly 12 digits (currently ${nic.length})`;
+    hint.className = 'field-hint err';
+  }
+
+  btn.disabled = !(nameOk && nicOk && gender && bus && !busFull(bus, gender));
 }
 
 document.getElementById('nameInput').addEventListener('input', updateSubmitState);
+document.getElementById('nicInput').addEventListener('input', (e)=>{
+  // keep digits only, cap at 12
+  e.target.value = e.target.value.replace(/[^0-9]/g,'').slice(0,12);
+  updateSubmitState();
+});
 
 function escapeHtml(s){
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -287,8 +328,9 @@ function listenForUpdates(){
 
 async function submitVote(){
   const name = document.getElementById('nameInput').value.trim();
+  const nic = document.getElementById('nicInput').value.trim();
   const msg = document.getElementById('msg');
-  if(!name || !gender || !bus || !db) return;
+  if(!name || !isValidNic(nic) || !gender || !bus || !db) return;
 
   if(busFull(bus, gender)){
     msg.className = 'msg err';
@@ -297,12 +339,21 @@ async function submitVote(){
     return;
   }
 
+  if(names.some(v => v.nic === nic)){
+    msg.className = 'msg err';
+    msg.textContent = 'This NIC number has already been used to sign up.';
+    return;
+  }
+
   try{
     const newRef = db.ref('votes').push();
-    await newRef.set({ name, gender, bus, ts: Date.now() });
+    await newRef.set({ name, nic, gender, bus, ts: Date.now() });
     msg.className = 'msg ok';
     msg.textContent = `You're set — Bus ${bus}! 🎉`;
     document.getElementById('nameInput').value = '';
+    document.getElementById('nicInput').value = '';
+    document.getElementById('nicHint').textContent = 'Must be exactly 12 digits';
+    document.getElementById('nicHint').className = 'field-hint';
     gender = null; bus = null;
     document.querySelectorAll('.choice').forEach(el=>el.classList.remove('selected'));
     renderBusOptions();
