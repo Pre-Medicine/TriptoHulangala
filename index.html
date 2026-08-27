@@ -88,9 +88,13 @@
   .summary-bus:last-of-type { border-bottom: none; margin-bottom: 0; }
   .head { display:flex; justify-content:space-between; font-weight:600; font-size:14px; margin-bottom:4px; color: var(--ink);}
   .sub2 { font-size: 12px; color: var(--muted); }
-  .name-list { max-height: 140px; overflow-y: auto; font-size: 13px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); columns: 2; column-gap: 14px; }
-  .name-list div { padding: 2px 0; break-inside: avoid; color: var(--ink); }
-  .g-tag { color: var(--muted); font-size: 11px; }
+  .name-list { max-height: 140px; overflow-y: auto; font-size: 11px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); columns: 2; column-gap: 14px; }
+  .name-list div { padding: 2px 0; break-inside: avoid; color: var(--ink); display: flex; align-items: center; gap: 5px; }
+  .g-tag {
+    color: #04140d; background: var(--brand-green); font-size: 9px; font-weight: 700;
+    width: 15px; height: 15px; border-radius: 4px; display: inline-flex; align-items: center;
+    justify-content: center; flex-shrink: 0;
+  }
   .refresh-note { font-size: 11px; color: var(--muted); text-align:center; margin-top: 4px;}
   .loading { text-align: center; color: var(--muted); padding: 20px; font-size: 14px; }
   .setup-warning {
@@ -114,8 +118,9 @@
   <div class="sub">Pick your bus. Each bus holds 40 (20 F / 20 M). Full combos lock automatically.</div>
 
   <div id="setupWarning" class="setup-warning" style="display:none;">
-    ⚠️ Please refer to your friends’ seat selections as well and make sure you have selected the correct bus.
-    <code>firebaseConfig</code> Please note that throughout the entire trip, you must travel on the same bus you selected during registration. So, kindly double-check your bus selection before submitting.
+    ⚠️ Firebase isn't configured yet. Open this file and paste your Firebase config into the
+    <code>firebaseConfig</code> section near the bottom of the page. See the setup instructions
+    provided alongside this file.
   </div>
 
   <div class="card" id="formCard">
@@ -142,7 +147,7 @@
   </div>
 
   <div class="brand-footer">
-    <div class="brand-text">Memosa</div>
+    <div class="brand-text">Colombo Pre Medicine Students Association</div>
   </div>
 </div>
 
@@ -151,23 +156,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+/* =========================================================================
+   PASTE YOUR FIREBASE CONFIG BELOW.
+   Get this from: Firebase Console -> Project Settings -> General ->
+   "Your apps" -> Web app -> the firebaseConfig object.
+   ========================================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDGnRwt2JQ1OHY-lKcWGIKcsm1oYdWoPjk",
   authDomain: "trip-to-hulangala.firebaseapp.com",
+  databaseURL: "https://trip-to-hulangala-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "trip-to-hulangala",
   storageBucket: "trip-to-hulangala.firebasestorage.app",
   messagingSenderId: "797100663304",
   appId: "1:797100663304:web:c1f1edfa2625bb13d067bd"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+/* ========================================================================= */
 
 const CAP_PER_GENDER_PER_BUS = 20; // => 40 per bus, 20F+20M
 const BUSES = ['A','B','C'];
@@ -255,7 +258,7 @@ function renderSummary(){
       <div class="head"><span>Bus ${b}</span><span>${f+m}/40</span></div>
       <div class="sub2">${f} female • ${m} male</div>
       ${busNames.length ? `<div class="name-list">` + busNames
-        .map(v=>`<div>${escapeHtml(v.name)} <span class="g-tag">(${v.gender})</span></div>`)
+        .map(v=>`<div><span class="g-tag">${v.gender}</span>${escapeHtml(v.name)}</div>`)
         .join('') + `</div>` : `<div class="sub2" style="font-style:italic;">No one yet</div>`}
     </div>`;
   });
